@@ -16,7 +16,8 @@ namespace _2023S2_SProj1_ThousandMissile
         public List<string> data = new List<string>();
         public List<string> dates = new List<string>();
         public bool favourite;
-        public ProductSource(string name, string price, int index, List<string> data, List<string> dates,bool fav)
+        public string source;
+        public ProductSource(string name, string price, int index, List<string> data, List<string> dates,bool fav, string source)
         {
             Name = name;
             Price = price;
@@ -24,6 +25,7 @@ namespace _2023S2_SProj1_ThousandMissile
             this.data = data;
             this.dates = dates;
             favourite = fav;
+            this.source = source;
         }
     }
 

@@ -31,13 +31,14 @@ namespace _2023S2_SProj1_ThousandMissile
         internal int page = 0;
         internal int ListUsed = 1;
         internal Product Selected;
+        Scrape scraper;
         int maxlen = 0;
 
         public Form1()
         {
             InitializeComponent();
             this.WindowState = FormWindowState.Maximized;
-            Scrape scraper  = new Scrape(this);
+            scraper  = new Scrape(this);
             scraper.debug = true;
             scraper.enabled = true;
             scraper.RunNotAsync();
@@ -163,9 +164,9 @@ namespace _2023S2_SProj1_ThousandMissile
             int maxString = 0;
             var workbook = new Excel.XLWorkbook("../../../" + Data);
             int total = 0;
-            for (int j = 0; j < 3; j++)
+            for (int j = 0; j < scraper.URLS.Count(); j++)
             {
-                var sheet = workbook.Worksheets.Worksheet(String.Format("Sheet{0}", j + 1));
+                var sheet = workbook.Worksheets.Worksheet(scraper.URLS[j].Split("/").Last().Split("?")[0]);
                 List<string> headers = sheet.Row(1).CellsUsed().Select(c => c.Value.ToString()).ToList();
                 List<string> prices = sheet.LastRowUsed().CellsUsed().Select(c => c.Value.ToString()).ToList();
                 prices.RemoveAt(0);
@@ -178,7 +179,7 @@ namespace _2023S2_SProj1_ThousandMissile
                     string name = headers[i];
                     if(name.Length>maxString) maxString = name.Length;
                     string price = prices[i];
-                    ProductSource product = new ProductSource(name, price, total, data, dates, false);
+                    ProductSource product = new ProductSource(name, price, total, data, dates, false, scraper.URLS[j].Split("/").Last().Split("?")[0]);
                     Products.Add(product);                    
                 }
             }
@@ -191,7 +192,7 @@ namespace _2023S2_SProj1_ThousandMissile
                     string space = new string(' ', maxString - Products[i].Name.Length);
                     temp = Products[i].Name + space;
                 }
-                Products[i] = new ProductSource(temp, Products[i].Price, i, Products[i].data, Products[i]. dates, false);
+                Products[i] = new ProductSource(temp, Products[i].Price, i, Products[i].data, Products[i].dates, false, Products[i].source);
                 float change = FindPriceChange(Products[i].data);
                 SearchedItems.Add(new productRefrence(i, Products[i].Name, change));
             }
@@ -278,7 +279,7 @@ namespace _2023S2_SProj1_ThousandMissile
             foreach (ProductSource product in Products)
             {
             
-                if (product.Name.ToLower().Contains(terms[0].ToLower()))
+                if (product.Name.ToLower().Contains(terms[0].ToLower()) || product.source.ToLower().Contains(terms[0].ToLower()))
                 {
                     SearchedItems.Add(new productRefrence(product.Index, product.Name, FindPriceChange(product.data)));
                 }
@@ -288,7 +289,7 @@ namespace _2023S2_SProj1_ThousandMissile
             {
                 for(int j = 0; j < SearchedItems.Count(); j++)
                 {
-                    if(!Products[SearchedItems[j].index].Name.ToLower().Contains(terms[i].ToLower()))
+                    if(!(Products[SearchedItems[j].index].Name.ToLower().Contains(terms[i].ToLower())|| Products[SearchedItems[j].index].source.ToLower().Contains(terms[i].ToLower())))
                     {
                         SearchedItems.RemoveAt(j);
                         j--;

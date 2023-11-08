@@ -13,8 +13,9 @@ namespace _2023S2_SProj1_ThousandMissile
     internal class Scrape
     {
         IPage page;
-        List<string> URLS = new List<string> { @"https://www.woolworths.com.au/shop/browse/fruit-veg?pageNumber=1&sortBy=Name", @"https://www.woolworths.com.au/shop/browse/lunch-box?pageNumber=1&sortBy=Name",
-            @"https://www.woolworths.com.au/shop/browse/poultry-meat-seafood?pageNumber=1&sortBy=Name" };
+        public List<string> URLS = new List<string> { @"https://www.woolworths.com.au/shop/browse/fruit-veg?pageNumber=1&sortBy=Name", @"https://www.woolworths.com.au/shop/browse/lunch-box?pageNumber=1&sortBy=Name",
+            @"https://www.woolworths.com.au/shop/browse/poultry-meat-seafood?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/bakery?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/deli-chilled-meals?pageNumber=1&sortBy=Name",
+        @"https://www.woolworths.com.au/shop/browse/dairy-eggs-fridge?pageNumber=1&sortBy=Name"};
         string ProductTileClass = ".product-tile-v2";
         string ProductTileName = ".product-title-link";
         string ProductTilePrice = ".product-tile-price";
@@ -27,6 +28,7 @@ namespace _2023S2_SProj1_ThousandMissile
         public bool enabled = true;
         Form1 form;
         int i;
+        int lastStop = 0;
         public Scrape(Form1 form)
         {
             this.form = form;
@@ -72,8 +74,9 @@ namespace _2023S2_SProj1_ThousandMissile
                 Microsoft.Playwright.Program.Main(new[] { "install" });
                 browser = await playwright.Firefox.LaunchAsync(new() { Headless = true });
             }
-            
-            for (i = 0; i < URLS.Count; i++)
+            lastStop = int.Parse(File.ReadAllText("../../../LastStop.txt"));
+            CreateLog(String.Format("LastRun {0}", lastStop));
+            for (i = lastStop; i < URLS.Count; i++)
             {
                 products.Clear();
                 page = await browser.NewPageAsync();
@@ -85,6 +88,7 @@ namespace _2023S2_SProj1_ThousandMissile
            
             //Update last run txt
             File.WriteAllText("../../../LastRun.txt", DateTime.Now.ToString().Split()[0]);
+            File.WriteAllText("../../../LastStop.txt", "0");
 
         }
 
@@ -93,16 +97,23 @@ namespace _2023S2_SProj1_ThousandMissile
         private async Task<int> ScrapeAllPages()
         {
             var workbook = new Excel.XLWorkbook("../../../data.xlsx");
-            var sheet = workbook.Worksheets.Worksheet(String.Format("Sheet{0}", i + 1));
-            CreateLog("Start compiling items");
-            List<string> headers = sheet.Row(1).CellsUsed().Select(c => c.Value.ToString()).ToList();
-            foreach (string name in headers)
-            {
-                try { products.Add(name, "-1"); }
-                catch { }
-                
+            try {
+                var sheet = workbook.Worksheets.Worksheet(String.Format("Sheet{0}", i + 1));
+                CreateLog("Start compiling items");
+                List<string> headers = sheet.Row(1).CellsUsed().Select(c => c.Value.ToString()).ToList();
+                foreach (string name in headers)
+                {
+                    try { products.Add(name, "-1"); }
+                    catch { }
+
+                }
+                CreateLog("Finished dictionary population");
             }
-            CreateLog("Finished dictionary population");
+            catch
+            {
+                CreateLog("New Entry, no dictionary population");
+            }
+            CreateLog(String.Format("Section: {0}", URLS[i].Split("/").Last().Split("?")[0]));
 
 
             int pagecount = await GetPageNumber();
@@ -200,7 +211,13 @@ namespace _2023S2_SProj1_ThousandMissile
         {
             CreateLog(String.Format("{0} many products", data.Count));
             var workbook = new Excel.XLWorkbook("../../../data.xlsx");
-            var sheet = workbook.Worksheets.Worksheet(String.Format("Sheet{0}", i + 1));
+            Excel.IXLWorksheet sheet = workbook.Worksheets.Worksheet("fruit-veg");
+            try { sheet = workbook.Worksheets.Worksheet(URLS[i].Split("/").Last().Split("?")[0]); }
+            catch
+            {
+                sheet = workbook.Worksheets.Add(URLS[i].Split("/").Last().Split("?")[0]);
+            }
+            
             List<string> names = data.Keys.ToList();
             int workingRow;
             //Check if empty
@@ -258,7 +275,8 @@ namespace _2023S2_SProj1_ThousandMissile
 
             CreateLog("Saving Now");
             workbook.Save();
-           // System.IO.File.WriteAllLines(String.Format("SavedLists{0}.txt", runCount), );
+            File.WriteAllText("../../../LastStop.txt", (i+1).ToString());
+            // System.IO.File.WriteAllLines(String.Format("SavedLists{0}.txt", runCount), );
         }
            
         public async void CreateLog(string text)

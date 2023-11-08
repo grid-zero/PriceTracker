@@ -92,7 +92,7 @@ namespace _2023S2_SProj1_ThousandMissile
         {
             if (form.ListUsed == 1) form.SearchedItems.Reverse();
             if (form.ListUsed == 2) form.Favourites.Reverse();
-            if(form.ListUsed == 3) form.byPriceChange.Reverse();
+            if(form.ListUsed == 3) form.SearchedItems.Reverse();
             UpdateSideBar();
         }
 
@@ -100,7 +100,7 @@ namespace _2023S2_SProj1_ThousandMissile
         {
             form.ListUsed = 3;
             form.page = 0;
-            form.pageSelector.totalPages = (int)Math.Ceiling(form.byPriceChange.Count / 50f);
+            form.pageSelector.totalPages = (int)Math.Ceiling(form.SearchedItems.Count / 50f);
             UpdateSideBar();
         }
 
@@ -129,9 +129,22 @@ namespace _2023S2_SProj1_ThousandMissile
         public void UpdateSideBar()
         {
             PageCount.Text = String.Format("Page {0} of {1}", form.page + 1, totalPages);
-            if (form.ListUsed == 1) form.AddProductsToSideBar(form.SearchedItems);
-            if (form.ListUsed == 2) form.AddProductsToSideBar(form.Favourites);
-            if (form.ListUsed == 3) form.AddProductsToSideBar(form.byPriceChange);
+            if (form.ListUsed == 1)
+            {
+                form.SearchedItems = form.SearchedItems.OrderBy(x => x.productName).ToList();
+                form.AddProductsToSideBar(form.SearchedItems);
+            }
+            if (form.ListUsed == 2)
+            {
+                form.AddProductsToSideBar(form.Favourites);
+            }
+            if (form.ListUsed == 3)
+            {
+                form.SearchedItems = form.SearchedItems.OrderBy(x => x.priceChange).ToList();
+                form.AddProductsToSideBar(form.SearchedItems);
+            }
+         
+
             form.Selected.ProductName.Font = new Font(form.Selected.ProductName.Font.Name, form.Selected.ProductName.Font.Size);
             if (form.ProductSideBar.Controls[0].ProductName != "")
             {
