@@ -12,7 +12,7 @@ namespace _2023S2_SProj1_ThousandMissile
 {
     internal class Scrape
     {
-        IPage page;
+        
         public List<string> URLS = new List<string> { @"https://www.woolworths.com.au/shop/browse/fruit-veg?pageNumber=1&sortBy=Name", @"https://www.woolworths.com.au/shop/browse/lunch-box?pageNumber=1&sortBy=Name",
             @"https://www.woolworths.com.au/shop/browse/poultry-meat-seafood?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/bakery?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/deli-chilled-meals?pageNumber=1&sortBy=Name",
         @"https://www.woolworths.com.au/shop/browse/dairy-eggs-fridge?pageNumber=1&sortBy=Name"};
@@ -23,11 +23,11 @@ namespace _2023S2_SProj1_ThousandMissile
         string NextButton = ".paging-next";
         int pageLoadTime = 2500;
         int PageCount = 1000;
-        SortedDictionary<string,string> products = new SortedDictionary<string,string>();
+        List<SortedDictionary<string, string>> sections = new List<SortedDictionary<string, string>>();
+
         public bool debug = false;
         public bool enabled = true;
         Form1 form;
-        int i;
         int lastStop = 0;
         public Scrape(Form1 form)
         {
@@ -65,7 +65,22 @@ namespace _2023S2_SProj1_ThousandMissile
         }
         private async void Run()
         {
-            
+           
+            await WrapperCall();
+            CreateLog("Saving data...");
+            for (int j = 0; j < sections.Count; j++)
+            {
+                Save(sections[j], j);
+            }
+           
+            //Update last run txt
+            File.WriteAllText("../../../LastRun.txt", DateTime.Now.ToString().Split()[0]);
+            File.WriteAllText("../../../LastStop.txt", "0");
+
+        }
+        private async Task<int> WrapperCall()
+        {
+            int i = 0;
             var playwright = await Playwright.CreateAsync();
             Microsoft.Playwright.IBrowser browser;
             try { browser = await playwright.Firefox.LaunchAsync(new() { Headless = true }); }
@@ -78,27 +93,28 @@ namespace _2023S2_SProj1_ThousandMissile
             CreateLog(String.Format("LastRun {0}", lastStop));
             for (i = lastStop; i < URLS.Count; i++)
             {
-                products.Clear();
-                page = await browser.NewPageAsync();
-                await page.GotoAsync(URLS[i]);
-                await page.WaitForLoadStateAsync();
-                CreateLog("Begin scrape");
-                await ScrapeAllPages();
-            }
-           
-            //Update last run txt
-            File.WriteAllText("../../../LastRun.txt", DateTime.Now.ToString().Split()[0]);
-            File.WriteAllText("../../../LastStop.txt", "0");
+                IPage page = await browser.NewPageAsync();
 
+                EachSection(page, i);
+                CreateLog("Begin scrape");
+            }
+            return 0;
         }
 
+        private async Task<int> EachSection(IPage page,int i)
+        {
+            SortedDictionary<string, string> products = new SortedDictionary<string, string>();
+            await page.GotoAsync(URLS[i]);
+            await page.WaitForLoadStateAsync();
+            await ScrapeAllPages(page,products,i);
+            return 0;
+        }
 
-
-        private async Task<int> ScrapeAllPages()
+        private async Task<int> ScrapeAllPages(IPage page, SortedDictionary<string,string> products,int i)
         {
             var workbook = new Excel.XLWorkbook("../../../data.xlsx");
             try {
-                var sheet = workbook.Worksheets.Worksheet(String.Format("Sheet{0}", i + 1));
+                var sheet = workbook.Worksheets.Worksheet(URLS[i].Split("/").Last().Split("?")[0]);
                 CreateLog("Start compiling items");
                 List<string> headers = sheet.Row(1).CellsUsed().Select(c => c.Value.ToString()).ToList();
                 foreach (string name in headers)
@@ -116,35 +132,34 @@ namespace _2023S2_SProj1_ThousandMissile
             CreateLog(String.Format("Section: {0}", URLS[i].Split("/").Last().Split("?")[0]));
 
 
-            int pagecount = await GetPageNumber();
+            int pagecount = await GetPageNumber(page);
             PageCount = pagecount;
             pagecount -= 1;
             CreateLog(String.Format("PageCount Selected: {0}", PageCount));
-            for (int i = 0; i < pagecount; i++)
+            for (int j = 0; j < pagecount; j++)
             {
-                await ScrapeOnePage();
-                await NextPage();
-                CreateLog(String.Format("Scraped page {0}", i + 1));
+                await ScrapeOnePage(page, products);
+                await NextPage(page);
+                CreateLog(String.Format("Scraped page {0}", j + 1));
             }
             //After the last nexpage click, need to scrape the last page.
-            await ScrapeOnePage();
+            await ScrapeOnePage(page,products);
             CreateLog(String.Format("Scraped page {0}", PageCount));
-            CreateLog("Saving data...");
-            Save(products);
+            sections.Add(products);
             CreateLog("Done Scrape");
             return 0;
         }
 
-        private async Task<int> ScrapeOnePage()
+        private async Task<int> ScrapeOnePage(IPage page, SortedDictionary<string, string> products)
         {
             await page.WaitForTimeoutAsync(pageLoadTime);
-            await DeleteBottomAdd();
-            await GetAllProducts();
+            await DeleteBottomAdd(page);
+            await GetAllProducts(page,products);
             //await page.WaitForTimeoutAsync(pageScrapeTime);
             return 0;
         }
 
-        private async Task<int> DeleteBottomAdd()// There is a bottom bar of promotional products that are not wanted
+        private async Task<int> DeleteBottomAdd(IPage page)// There is a bottom bar of promotional products that are not wanted
         {
             await page.EvaluateAsync(@"
     var element = document.querySelector('.container-carousel');
@@ -155,7 +170,7 @@ namespace _2023S2_SProj1_ThousandMissile
         }
 
 
-        private async Task<int> GetAllProducts()
+        private async Task<int> GetAllProducts(IPage page, SortedDictionary<string, string> products)
         {
             //Get all product tiles
             var ProductElements = await page.QuerySelectorAllAsync(ProductTileClass);
@@ -189,7 +204,7 @@ namespace _2023S2_SProj1_ThousandMissile
             return 0;
         }
 
-        private async Task<int> GetPageNumber()
+        private async Task<int> GetPageNumber(IPage page)
         {
             await page.WaitForTimeoutAsync(pageLoadTime);
             var pageSelector = await page.QuerySelectorAsync(".paging-section");
@@ -200,14 +215,14 @@ namespace _2023S2_SProj1_ThousandMissile
             return pagecount;
         }
 
-        private async Task<int> NextPage()
+        private async Task<int> NextPage(IPage page)
         {
             var button = await page.QuerySelectorAsync(NextButton);
             button.ClickAsync();
             return 0;
         }
 
-        private void Save(SortedDictionary<string, string> data)
+        private void Save(SortedDictionary<string, string> data,int i)
         {
             CreateLog(String.Format("{0} many products", data.Count));
             var workbook = new Excel.XLWorkbook("../../../data.xlsx");
@@ -247,28 +262,28 @@ namespace _2023S2_SProj1_ThousandMissile
             if (headers.Count < names.Count)
             {
                 CreateLog("Using 2nd if to save");
-                for (int i = 1; i < names.Count+1; i++)
+                for (int j = 1; j < names.Count+1; j++)
                 {
                     
                     //If sorted price name matches
-                    if (names[i - 1] == sheet.Cell(1, i + 1).Value.ToString())
+                    if (names[j - 1] == sheet.Cell(1, j + 1).Value.ToString())
                     {
-                        sheet.Cell(workingRow, i + 1).Value = data[names[i-1]];
+                        sheet.Cell(workingRow, j + 1).Value = data[names[j - 1]];
                     }
                     else//Assume we have a new item, inbetween existing ones
                     {
-                        string header = sheet.Cell(1, i + 1).Value.ToString();
-                        string header2 = sheet.Cell(1, i).Value.ToString();
-                        string name = names[i - 1];
+                        string header = sheet.Cell(1, j + 1).Value.ToString();
+                        string header2 = sheet.Cell(1, j).Value.ToString();
+                        string name = names[j - 1];
 
-                        sheet.Column(i).InsertColumnsAfter(1);
-                        CreateLog(String.Format("Item Inserted, i = {0}",i));
-                        sheet.Cell(1, i+1).Value = names[i - 1];
-                        sheet.Cell(workingRow, i+1).Value = data[names[i - 1]];
+                        sheet.Column(j).InsertColumnsAfter(1);
+                        CreateLog(String.Format("Item Inserted, i = {0}", j));
+                        sheet.Cell(1, j + 1).Value = names[j - 1];
+                        sheet.Cell(workingRow, j + 1).Value = data[names[j - 1]];
 
 
-                        string after = sheet.Cell(1, i).Value.ToString();
-                        string after2 = sheet.Cell(1, i+1).Value.ToString();
+                        string after = sheet.Cell(1, j).Value.ToString();
+                        string after2 = sheet.Cell(1, j+1).Value.ToString();
                     }
                 }
             }

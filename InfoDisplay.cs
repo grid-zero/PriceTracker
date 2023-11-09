@@ -172,9 +172,10 @@ namespace _2023S2_SProj1_ThousandMissile
                 priceHistory.Series[0].Points.AddXY(Convert.ToDateTime(temp.dates[i]).ToOADate(), val);
             }
 
-            sixMonthHigh.Text = "$" + temp.data.Max();
-            sixMonthLow.Text = "$" + temp.data.Min();
+            
             List<string> intdata = temp.data.Where(x => x != null).ToList();
+            sixMonthHigh.Text = "$" + intdata.Max(x=>float.Parse(x));
+            sixMonthLow.Text = "$" + intdata.Min(x => float.Parse(x));
             if (intdata.Count == 1 | intdata.Count == 0) yestChange.Text = "0%";
             else
             {
