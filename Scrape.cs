@@ -109,7 +109,7 @@ namespace _2023S2_SProj1_ThousandMissile
             }
             lastStop = int.Parse(File.ReadAllText("../../../LastStop.txt"));
             CreateLog(String.Format("LastRun {0}", lastStop));
-            for (i = 6; i < URLS.Count; i++)
+            for (i = 0; i < URLS.Count; i++)
             {
                 IPage page = await browser.NewPageAsync();
 
