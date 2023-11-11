@@ -4,4 +4,4 @@ obj/**
 *.vsidx
 *.lock
 /.vs/**
-
+fav.txt
