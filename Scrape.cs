@@ -13,9 +13,11 @@ namespace _2023S2_SProj1_ThousandMissile
     internal class Scrape
     {
         
-        public List<string> URLS = new List<string> { @"https://www.woolworths.com.au/shop/browse/fruit-veg?pageNumber=1&sortBy=Name", @"https://www.woolworths.com.au/shop/browse/lunch-box?pageNumber=1&sortBy=Name",
-            @"https://www.woolworths.com.au/shop/browse/poultry-meat-seafood?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/bakery?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/deli-chilled-meals?pageNumber=1&sortBy=Name",
-        @"https://www.woolworths.com.au/shop/browse/dairy-eggs-fridge?pageNumber=1&sortBy=Name"};
+        public List<string> URLS = new List<string> { 
+        @"https://www.woolworths.com.au/shop/browse/fruit-veg?pageNumber=1&sortBy=Name", @"https://www.woolworths.com.au/shop/browse/lunch-box?pageNumber=1&sortBy=Name",
+        @"https://www.woolworths.com.au/shop/browse/poultry-meat-seafood?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/bakery?pageNumber=1&sortBy=Name",
+        @"https://www.woolworths.com.au/shop/browse/deli-chilled-meals?pageNumber=1&sortBy=Name",@"https://www.woolworths.com.au/shop/browse/dairy-eggs-fridge?pageNumber=1&sortBy=Name",
+        @"https://www.woolworths.com.au/shop/browse/drinks?pageNumber=1&sortBy=Name"};
         string ProductTileClass = ".product-tile-v2";
         string ProductTileName = ".product-title-link";
         string ProductTilePrice = ".product-tile-price";
@@ -23,7 +25,7 @@ namespace _2023S2_SProj1_ThousandMissile
         string NextButton = ".paging-next";
         int pageLoadTime = 2500;
         int PageCount = 1000;
-        List<SortedDictionary<string, string>> sections = new List<SortedDictionary<string, string>>();
+        SortedDictionary<string, string>[] sections;
 
         public bool debug = false;
         public bool enabled = true;
@@ -31,6 +33,7 @@ namespace _2023S2_SProj1_ThousandMissile
         int lastStop = 0;
         public Scrape(Form1 form)
         {
+            sections = new SortedDictionary<string, string>[URLS.Count];
             this.form = form;
         }
 
@@ -67,8 +70,12 @@ namespace _2023S2_SProj1_ThousandMissile
         {
            
             await WrapperCall();
+            while (!CheckEmptyArray(sections))
+            {
+                await Task.Delay(25);
+            }
             CreateLog("Saving data...");
-            for (int j = 0; j < sections.Count; j++)
+            for (int j = 0; j < sections.Length; j++)
             {
                 Save(sections[j], j);
             }
@@ -77,6 +84,17 @@ namespace _2023S2_SProj1_ThousandMissile
             File.WriteAllText("../../../LastRun.txt", DateTime.Now.ToString().Split()[0]);
             File.WriteAllText("../../../LastStop.txt", "0");
 
+        }
+        private bool CheckEmptyArray(SortedDictionary<string, string>[] sections)
+        {
+            for(int i = 0; i < sections.Length; i++)
+            {
+                if(sections[i] == null)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
         private async Task<int> WrapperCall()
         {
@@ -91,7 +109,7 @@ namespace _2023S2_SProj1_ThousandMissile
             }
             lastStop = int.Parse(File.ReadAllText("../../../LastStop.txt"));
             CreateLog(String.Format("LastRun {0}", lastStop));
-            for (i = lastStop; i < URLS.Count; i++)
+            for (i = 6; i < URLS.Count; i++)
             {
                 IPage page = await browser.NewPageAsync();
 
@@ -145,7 +163,7 @@ namespace _2023S2_SProj1_ThousandMissile
             //After the last nexpage click, need to scrape the last page.
             await ScrapeOnePage(page,products);
             CreateLog(String.Format("Scraped page {0}", PageCount));
-            sections.Add(products);
+            sections[i] = products;
             CreateLog("Done Scrape");
             return 0;
         }
@@ -162,7 +180,12 @@ namespace _2023S2_SProj1_ThousandMissile
         private async Task<int> DeleteBottomAdd(IPage page)// There is a bottom bar of promotional products that are not wanted
         {
             await page.EvaluateAsync(@"
-    var element = document.querySelector('.container-carousel');
+            var element = document.querySelector('.container-carousel');
+            if (element)
+                element.parentNode.removeChild(element);
+            ");
+            await page.EvaluateAsync(@"
+            var element = document.querySelector('.container-productCarousel');
             if (element)
                 element.parentNode.removeChild(element);
             ");

@@ -24,6 +24,7 @@ namespace _2023S2_SProj1_ThousandMissile
         internal TextBox SearchBar;
         internal PageSelector pageSelector;
         string Data = "data.xlsx";
+        internal string[] fav;
         internal List<ProductSource> Products = new List<ProductSource>();
         internal List<productRefrence> SearchedItems = new List<productRefrence>();
         internal List<productRefrence> Favourites = new List<productRefrence>();
@@ -44,6 +45,7 @@ namespace _2023S2_SProj1_ThousandMissile
             scraper.RunNotAsync();
 
             this.Resize += FormResize;
+            LoadFavouritesFromFile();
             LoadProductsFromFile();
 
             InitMainDiv();
@@ -56,6 +58,7 @@ namespace _2023S2_SProj1_ThousandMissile
             this.Controls.Add(MainDiv);
             this.DoubleBuffered = true;
             this.BackColor = Color.FromArgb(247, 246, 242);
+            this.FormClosed += Form1_FormClosing;
             
         }
 
@@ -157,8 +160,21 @@ namespace _2023S2_SProj1_ThousandMissile
             //if (CalcHeight(SideBarDiv)< this.ClientSize.Height) ProductSideBar.AutoScroll = false;
         }
 
+
+        private void Form1_FormClosing(object? sender, FormClosedEventArgs e)
+        {
+            fav = Favourites.Select(x => x.productName).ToArray();
+            File.WriteAllLines("../../../fav.txt",fav);
+        }
+
+
         //------------Actions--------------
 
+
+        private void LoadFavouritesFromFile()
+        {
+            fav = File.ReadAllLines("../../../fav.txt");
+        }
         private void LoadProductsFromFile()
         {
             int maxString = 0;
@@ -186,15 +202,24 @@ namespace _2023S2_SProj1_ThousandMissile
             Products = Products.OrderBy(x => x.Name).ToList();
             for (int i = 0; i< total; i++)
             {
+
+                bool favorite = false;
                 string temp = Products[i].Name;
                 if (Products[i].Name.Length< maxString)
                 {
                     string space = new string(' ', maxString - Products[i].Name.Length);
                     temp = Products[i].Name + space;
                 }
-                Products[i] = new ProductSource(temp, Products[i].Price, i, Products[i].data, Products[i].dates, false, Products[i].source);
                 float change = FindPriceChange(Products[i].data);
+                if (fav.Any(x => x.Contains(temp.Trim())))
+                {
+                    Favourites.Add(new productRefrence(i, Products[i].Name, change));
+                    favorite = true;
+                }
+                Products[i] = new ProductSource(temp, Products[i].Price, i, Products[i].data, Products[i].dates, favorite, Products[i].source);
+               
                 SearchedItems.Add(new productRefrence(i, Products[i].Name, change));
+               
             }
 
             byPriceChange = SearchedItems.OrderBy(x => x.priceChange).ToList();

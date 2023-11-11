@@ -202,7 +202,7 @@ namespace _2023S2_SProj1_ThousandMissile
         {
             
             form.Selected.favourite = !form.Selected.favourite;
-            productRefrence refrence = new productRefrence(form.Selected.sourceIndex,form.Selected.Name,form.FindPriceChange(form.Selected.data));
+            productRefrence refrence = new productRefrence(form.Selected.sourceIndex,form.Selected.ProductName.Text,form.FindPriceChange(form.Selected.data));
 
             ProductSource updates = new ProductSource(form.Products[form.Selected.sourceIndex].Name, form.Products[form.Selected.sourceIndex].Price, form.Selected.sourceIndex,
                                                             form.Products[form.Selected.sourceIndex].data, form.Products[form.Selected.sourceIndex].dates, form.Selected.favourite, 
