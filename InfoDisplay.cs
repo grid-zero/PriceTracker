@@ -174,20 +174,27 @@ namespace _2023S2_SProj1_ThousandMissile
 
             
             List<string> intdata = temp.data.Where(x => x != null).ToList();
-            sixMonthHigh.Text = "$" + intdata.Max(x=>float.Parse(x));
-            sixMonthLow.Text = "$" + intdata.Min(x => float.Parse(x));
-            if (intdata.Count == 1 | intdata.Count == 0) yestChange.Text = "0%";
-            else
+            try
             {
-                List<float> newdata = intdata.Select(x => float.Parse(x)).ToList();
-                newdata.RemoveAt(newdata.Count - 1);
-                float average = newdata.Average();
-                float change = float.Parse(intdata.Last()) / average;
-                float reducedChange = change - 1;
-                float percentChange = reducedChange * 100;
-                float absoluteChange = float.Parse(intdata.Last()) - average;
-                priceChange.Text = "$" + absoluteChange.ToString("F");
-                yestChange.Text = percentChange.ToString("F") + "%";
+                sixMonthHigh.Text = "$" + intdata.Max(x => float.Parse(x));
+                sixMonthLow.Text = "$" + intdata.Min(x => float.Parse(x));
+                if (intdata.Count == 1 | intdata.Count == 0) yestChange.Text = "0%";
+                else
+                {
+                    List<float> newdata = intdata.Select(x => float.Parse(x)).ToList();
+                    newdata.RemoveAt(newdata.Count - 1);
+                    float average = newdata.Average();
+                    float change = float.Parse(intdata.Last()) / average;
+                    float reducedChange = change - 1;
+                    float percentChange = reducedChange * 100;
+                    float absoluteChange = float.Parse(intdata.Last()) - average;
+                    priceChange.Text = "$" + absoluteChange.ToString("F");
+                    yestChange.Text = percentChange.ToString("F") + "%";
+                }
+            }
+            catch (Exception ex)
+            {
+
             }
             for (int i = 1; i < Controls[0].Controls.Count; i += 2)
             {

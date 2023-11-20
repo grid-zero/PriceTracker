@@ -23,7 +23,7 @@ namespace _2023S2_SProj1_ThousandMissile
         string ProductTilePrice = ".product-tile-price";
         string ProductTilePricePrimary = ".primary";
         string NextButton = ".paging-next";
-        int pageLoadTime = 2500;
+        int pageLoadTime = 2600;
         int PageCount = 1000;
         SortedDictionary<string, string>[] sections;
 
@@ -162,7 +162,7 @@ namespace _2023S2_SProj1_ThousandMissile
             }
             //After the last nexpage click, need to scrape the last page.
             await ScrapeOnePage(page,products);
-            CreateLog(String.Format("Scraped page {0}", PageCount));
+            CreateLog(String.Format("Scraped page {0}", pagecount+1));
             sections[i] = products;
             CreateLog("Done Scrape");
             return 0;
