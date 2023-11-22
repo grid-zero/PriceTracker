@@ -114,7 +114,7 @@ namespace _2023S2_SProj1_ThousandMissile
                 IPage page = await browser.NewPageAsync();
 
                 EachSection(page, i);
-                CreateLog("Begin scrape");
+                CreateLog(String.Format("Begin scrape of {0}", URLS[i].Split("/").Last().Split("?")[0]));
             }
             return 0;
         }
